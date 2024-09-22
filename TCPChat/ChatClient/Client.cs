@@ -24,7 +24,6 @@ public class Client
 
                 await writer.WriteLineAsync(userName);
                 await writer.FlushAsync();
-
                 string? response = await reader.ReadLineAsync();
 
                 if (response == "Welcome")

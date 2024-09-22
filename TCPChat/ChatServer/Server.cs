@@ -7,22 +7,21 @@ public class Server
 {
     private TcpListener _tcpListener = new TcpListener(IPAddress.Any, 8000);
     private Dictionary<string, Client> _clients = new Dictionary<string, Client>();
+    public IEnumerable<Client> Clients => _clients.Values;
 
-    public string GetOtherClients(string excludeClientId)
+    public void AddClient(Client client)
     {
-        return string.Join(", ", _clients.Values
-            .Where(c => c.Id != excludeClientId)
-            .Select(c => c.UserName));
+        _clients.Add(client.Id, client);
+    }
+
+    public Client? GetClientName(string userName)
+    {
+        return _clients.Values.FirstOrDefault(c => c.UserName == userName);
     }
 
     public bool UserNameTaken(string userName)
     {
         return _clients.Values.Any(c => c.UserName == userName);
-    }
-
-    public void AddClient(Client client)
-    {
-        _clients.Add(client.Id, client);
     }
 
     public async Task BroadCastMessage(string message, string id)

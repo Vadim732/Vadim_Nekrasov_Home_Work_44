@@ -41,16 +41,8 @@ public class Client
                     UserName = proposedUserName;
                     await Writer.WriteLineAsync("Welcome");
                     await Writer.FlushAsync();
-
-                    string otherUsers = _server.GetOtherClients(Id);
-                    if (!string.IsNullOrEmpty(otherUsers))
-                    {
-                        await Writer.WriteLineAsync($"Users in chat: {otherUsers}");
-                    }
-                    else
-                    {
-                        await Writer.WriteLineAsync("There is no one in the chat :C");
-                    }
+                    string otherUsers = string.Join(", ", _server.Clients.Where(c => c.Id != Id).Select(c => c.UserName));
+                    await Writer.WriteLineAsync(string.IsNullOrEmpty(otherUsers) ? "There is no one in the chat :C" : $"Users in chat: {otherUsers}");
                     await Writer.FlushAsync();
 
                     break;
@@ -67,9 +59,41 @@ public class Client
                 {
                     message = await Reader.ReadLineAsync();
                     if (message == null) continue;
-                    message = $"{UserName}: {message}";
-                    Console.WriteLine(message);
-                    await _server.BroadCastMessage(message, Id);
+
+                    if (message.StartsWith(">"))
+                    {
+                        int colonIndex = message.IndexOf(':');
+                        if (colonIndex > 1)
+                        {
+                            string recipientName = message.Substring(1, colonIndex - 1).Trim();
+                            string privateMessage = message.Substring(colonIndex + 1).Trim();
+                            Client? recipient = _server.GetClientName(recipientName);
+                            if (recipient != null)
+                            {
+                                await recipient.Writer.WriteLineAsync($"Private message from {UserName}: {privateMessage}");
+                                await recipient.Writer.FlushAsync();
+                                await Writer.WriteLineAsync($"Private message to {recipientName}: {privateMessage}");
+                                await Writer.FlushAsync();
+                            }
+                            else
+                            {
+                                await Writer.WriteLineAsync($"User '{recipientName}' not found.");
+                                await Writer.FlushAsync();
+                            }
+                        }
+                        else
+                        {
+                            await Writer.WriteLineAsync("Invalid private message format. Use \"> Name : message\"");
+                            await Writer.FlushAsync();
+                        }
+                    
+                    }
+                    else
+                    {
+                        message = $"{UserName}: {message}";
+                        Console.WriteLine(message);
+                        await _server.BroadCastMessage(message, Id);
+                    }
                 }
             }
             catch (Exception ex)
