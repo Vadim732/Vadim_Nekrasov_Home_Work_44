@@ -21,6 +21,12 @@ public class Client
         Reader = new StreamReader(stream);
         server.AddClient(this);
     }
+    
+    public string MessageTime()
+    {
+        DateTime now = DateTime.Now;
+        return now.ToString("hh:mm:ss");
+    }
 
     public async Task ProcessAsync()
     {
@@ -92,10 +98,10 @@ public class Client
                             {
                                 foreach (var recipient in recipients)
                                 {
-                                    await recipient.Writer.WriteLineAsync($"Private message from {UserName}: {privateMessage}");
+                                    await recipient.Writer.WriteLineAsync($"[{MessageTime()}] Private message from {UserName}: {privateMessage}");
                                     await recipient.Writer.FlushAsync();
                                 }
-                                await Writer.WriteLineAsync($"Private message to {string.Join(", ", recipientNames)}: {privateMessage}");
+                                await Writer.WriteLineAsync($"[{MessageTime()}] Private message to {string.Join(", ", recipientNames)}: {privateMessage}");
                                 await Writer.FlushAsync();
                             }
                         }
@@ -107,7 +113,7 @@ public class Client
                     }
                     else
                     {
-                        message = $"{UserName}: {message}";
+                        message = $"[{MessageTime()}] {UserName}: {message}";
                         Console.WriteLine(message);
                         await _server.BroadCastMessage(message, Id);
                     }
