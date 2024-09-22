@@ -41,14 +41,15 @@ public class Client
                     UserName = proposedUserName;
                     await Writer.WriteLineAsync("Welcome");
                     await Writer.FlushAsync();
-                    string otherUsers = string.Join(", ", _server.Clients.Where(c => c.Id != Id).Select(c => c.UserName));
+
+                    string otherUsers =
+                        string.Join(", ", _server.Clients.Where(c => c.Id != Id).Select(c => c.UserName));
                     await Writer.WriteLineAsync(string.IsNullOrEmpty(otherUsers) ? "There is no one in the chat :C" : $"Users in chat: {otherUsers}");
                     await Writer.FlushAsync();
 
                     break;
                 }
             }
-
             string? message = $"{UserName} joined the chat!";
             await _server.BroadCastMessage(message, Id);
             Console.WriteLine(message);
@@ -59,34 +60,50 @@ public class Client
                 {
                     message = await Reader.ReadLineAsync();
                     if (message == null) continue;
-
+                    
                     if (message.StartsWith(">"))
                     {
                         int colonIndex = message.IndexOf(':');
                         if (colonIndex > 1)
                         {
-                            string recipientName = message.Substring(1, colonIndex - 1).Trim();
+                            string recipientsPart =
+                                message.Substring(1, colonIndex - 1).Trim();
                             string privateMessage = message.Substring(colonIndex + 1).Trim();
-                            Client? recipient = _server.GetClientName(recipientName);
-                            if (recipient != null)
+                            var recipientNames = recipientsPart.Split(',').Select(name => name.Trim()).ToList();
+                            var recipients = new List<Client>();
+
+                            bool allRecipientsExist = true;
+                            foreach (var recipientName in recipientNames)
                             {
-                                await recipient.Writer.WriteLineAsync($"Private message from {UserName}: {privateMessage}");
-                                await recipient.Writer.FlushAsync();
-                                await Writer.WriteLineAsync($"Private message to {recipientName}: {privateMessage}");
-                                await Writer.FlushAsync();
+                                Client? recipient = _server.GetClientName(recipientName);
+                                if (recipient != null)
+                                {
+                                    recipients.Add(recipient);
+                                }
+                                else
+                                {
+                                    await Writer.WriteLineAsync($"User \"{recipientName}\" not found.");
+                                    await Writer.FlushAsync();
+                                    allRecipientsExist = false;
+                                }
                             }
-                            else
+
+                            if (allRecipientsExist)
                             {
-                                await Writer.WriteLineAsync($"User '{recipientName}' not found.");
+                                foreach (var recipient in recipients)
+                                {
+                                    await recipient.Writer.WriteLineAsync($"Private message from {UserName}: {privateMessage}");
+                                    await recipient.Writer.FlushAsync();
+                                }
+                                await Writer.WriteLineAsync($"Private message to {string.Join(", ", recipientNames)}: {privateMessage}");
                                 await Writer.FlushAsync();
                             }
                         }
                         else
                         {
-                            await Writer.WriteLineAsync("Invalid private message format. Use \"> Name : message\"");
+                            await Writer.WriteLineAsync("Invalid private message format. Use \"> Name, Name : message\".");
                             await Writer.FlushAsync();
                         }
-                    
                     }
                     else
                     {
@@ -98,7 +115,7 @@ public class Client
             }
             catch (Exception ex)
             {
-                message = $"{UserName} left the chat";
+                message = $"{UserName} left the chat :с";
                 Console.WriteLine(message);
                 await _server.BroadCastMessage(message, Id);
             }
