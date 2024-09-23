@@ -5,12 +5,67 @@ namespace ChatClient;
 
 public class Client
 {
+    public async Task ConnectServerAsync()
+    {
+        while (true)
+        {
+            Console.WriteLine("Enter the server IP-address:");
+            string? ip = Console.ReadLine();
+
+            Console.WriteLine("Enter server port:");
+            string? connectionPort = Console.ReadLine();
+
+            if (int.TryParse(connectionPort, out int port))
+            {
+                bool connected = await CheckConnectAsync(ip, port);
+
+                if (connected)
+                {
+                    Console.WriteLine("Successful connection to the server! c:");
+                    await RunAsync(ip, port);
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Failed to connect to the server! :с \nIf you want to exit, type \"stop\". \nIf you want to try connecting again, type \"more\".");
+                    string? gg = Console.ReadLine();
+                    if (gg?.ToLower() == "stop")
+                    {
+                        return;
+                    }
+                    else if (gg?.ToLower() == "more")
+                    {
+                        continue;
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid IP address or port! Be more attentive =з");
+            }
+        }
+    }
+
+    private async Task<bool> CheckConnectAsync(string? host, int port)
+    {
+        using var client = new System.Net.Sockets.TcpClient();
+        try
+        {
+            await client.ConnectAsync(host, port);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     public async Task RunAsync(string host, int port)
     {
         using var client = new System.Net.Sockets.TcpClient();
         try
         {
-            client.Connect(host, port);
+            await client.ConnectAsync(host, port);
             var stream = client.GetStream();
             var reader = new StreamReader(stream);
             var writer = new StreamWriter(stream);
